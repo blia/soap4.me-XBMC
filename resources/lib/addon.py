@@ -205,11 +205,35 @@ def soap4me_get_titles():
 		if not token:
 			token = soap4me_login()
 
-		read_data = soap4me_get_cashe("index", 30)
+		read_data = soap4me_get_cashe("all", 30)
 		if not read_data:
 
 			print "Reload index cache"
 			read_data = GET(token, "http://soap4.me/api/soap/")
+			if read_data == '{"ok":0}':
+				raise Exception("Bad get titles")
+			soap4me_save_cashe("index", read_data)
+
+		data = json.loads(read_data)
+		return data
+
+	except e:
+		raise Exception('[%s]: GET EXCEPTION: %s' % (addon_id, e))
+		print '[%s]: GET EXCEPTION: %s' % (addon_id, e)
+		return None
+
+def soap4me_get_my():
+	try:
+		token = get_token()
+
+		if not token:
+			token = soap4me_login()
+
+		read_data = soap4me_get_cashe("my", 30)
+		if not read_data:
+
+			print "Reload index cache"
+			read_data = GET(token, "http://soap4.me/api/soap/my/")
 			if read_data == '{"ok":0}':
 				raise Exception("Bad get titles")
 			soap4me_save_cashe("index", read_data)
@@ -263,7 +287,7 @@ def soap4me_get_play(sid, eid, ehash):
 
 		data = json.loads(read_data)
 		if data["ok"] == 1:
-			return "http://%s.soap4.me/%s/%s/%s/" % (data["server"], token, eid, myhash)
+			return "http://%s.soap4.me/%s/%s/%s/" % (data['server'], token, eid, myhash)
 
 		raise Exception(data["error"])
 
@@ -271,11 +295,27 @@ def soap4me_get_play(sid, eid, ehash):
 		print '[%s]: GET EXCEPTION: %s' % (addon_id, e)
 		return None
 
+def soap4me_draw_categories():
+	cats = [
+		{'title':'Мои сериалы','uri': '%s?comtype=my' % (sys.argv[0])},
+		{'title':'Все сериалы','uri': '%s?comtype=all' % (sys.argv[0])}
+	]
+	for row in cats:
+		info = {}
+		info['title'] = row['title']
+		IsFolder = True
+		uri = row['uri']
+		li = xbmcgui.ListItem(info['title'])
+		xbmcplugin.addDirectoryItem(h, uri, li, IsFolder)
+	xbmcplugin.endOfDirectory(h)
 
 
-def soap4me_draw_titles():
-	data = soap4me_get_titles()
-
+def soap4me_draw_titles(what):
+	if what == 'my':
+		data = soap4me_get_my()
+	else:
+		data = soap4me_get_titles()
+	
 	for row in data:
 		info = {}
 		info['title'] = str(row['title'])
@@ -332,7 +372,8 @@ def soap4me_draw_episodes(sid,season):
 	data = soap4me_get_episodes(sid)
 	
 	ShowHdIfPossible = __addon__.getSetting('HD')
-	
+	sort = __addon__.getSetting('sorting')
+		
 	episode_names = {}
 	for episode in data:
 		if season == episode['season']:
@@ -348,7 +389,9 @@ def soap4me_draw_episodes(sid,season):
 				else:
 					if episode['quality'] == 'SD':
 						episode_names[episode['title_en']] = episode['eid']
-	
+	if sort != 'true':
+		data = reversed(data)
+
 	for row in data:
 		if season == row['season']:
 			print row['eid'],episode_names.values()
@@ -377,7 +420,7 @@ def soap4me_draw_episodes(sid,season):
 				li.setProperty('IsPlayable', 'true')
 				li.setInfo(type = vtype, infoLabels = info)
 				xbmcplugin.addDirectoryItem(h, uri, li, IsFolder)
-
+		
 	xbmcplugin.addSortMethod(h, xbmcplugin.SORT_METHOD_UNSORTED)
 	xbmcplugin.addSortMethod(h, xbmcplugin.SORT_METHOD_DATE)
 	xbmcplugin.addSortMethod(h, xbmcplugin.SORT_METHOD_DURATION)
@@ -430,5 +473,9 @@ def addon_main():
 		soap4me_draw_seasons(params['serial'])
 	elif type == "season":
 		soap4me_draw_episodes(params['serial'],params['season'])
+	elif type == "my":
+		soap4me_draw_titles('my')
+	elif type == "all":
+		soap4me_draw_titles('all')
 	else:
-		soap4me_draw_titles()
+		soap4me_draw_categories()
