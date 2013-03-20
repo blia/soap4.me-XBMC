@@ -321,7 +321,7 @@ def soap4me_draw_titles(what):
 		info['title'] = str(row['title'])
 		info['plot'] = row['description'].encode('utf-8')
 		serial = str(row['sid'])
-		img = "http://covers.s4me.ru/soap/big/"+str(row['sid'])+".jpg"
+		img = "https://soap4.me/assets/covers/soap/big/%s.jpg"%str(row['sid'])
 
 		vtype = 'video'
 		IsFolder = True
@@ -358,7 +358,7 @@ def soap4me_draw_seasons(sid):
 		for row in season:
 			info = {}
 			info['title'] = "Season %s"%str(row)
-			img = "http://covers.s4me.ru/season/big/%s.jpg"%season[row]
+			img = "https://soap4.me/assets/covers/season/big/%s.jpg"%season[row]
 			IsFolder = True
 			vtype = 'video'
 			uri = '%s?comtype=season&serial=%s&season=%s' % (sys.argv[0], urllib.quote_plus(str(sid)), urllib.quote_plus(str(row)))
